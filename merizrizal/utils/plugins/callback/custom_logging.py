@@ -101,7 +101,7 @@ class CallbackModule(CallbackBase):
     def _make_log_file_path(self):
         playbook_path = Path(self.playbook)
 
-        log_subdirectory = Path(self.log_directory).joinpath(playbook_path.parts[0])
+        log_subdirectory = Path(self.log_directory).joinpath(playbook_path.parent)
         makedirs_safe(log_subdirectory)
 
         self.path = log_subdirectory.joinpath(f'{playbook_path.stem}-{self.LOG_FILE_SUFFIX}.log')
