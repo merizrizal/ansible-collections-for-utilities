@@ -80,9 +80,6 @@ class CallbackModule(CallbackBase):
         self._log(result, 'ASYNC_FAILED')
 
     def _log(self, result: TaskResult, category):
-        """
-        Will write runner result into log file
-        """
         data = json.dumps(result._result)
         if result._task.vars and result._task.vars.get('custom_logging_mask'):
             for mask in result._task.vars.get('custom_logging_mask'):
