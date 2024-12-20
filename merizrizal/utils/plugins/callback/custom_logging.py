@@ -38,11 +38,8 @@ from ansible.utils.path import makedirs_safe
 
 
 class CallbackModule(CallbackBase):
-    """
-    This callback module will write the Ansible playbook result into particular log file.
-    """
     CALLBACK_VERSION = 2.0
-    CALLBACK_TYPE = 'aggregate'
+    CALLBACK_TYPE = 'notification'
     CALLBACK_NAME = 'merizrizal.utils.custom_logging'
 
     LOG_FILE_SUFFIX = datetime.now().strftime('%Y-%m-%d-%H-%M-%S-%f')
@@ -105,9 +102,6 @@ class CallbackModule(CallbackBase):
         self.logger.info(f'PLAYBOOK [{self.playbook}] \r\n')
 
     def _make_log_file_path(self):
-        """
-        Make directory and log file
-        """
         playbook_path = Path(self.playbook)
 
         log_subdirectory = Path(self.log_directory).joinpath(playbook_path.parts[0])
@@ -131,9 +125,6 @@ class CallbackModule(CallbackBase):
         self._write_time_calculation()
 
     def _write_summary(self, stats: AggregateStats):
-        """
-        Write summary of playbook
-        """
         hosts = sorted(stats.processed.keys())
         for host in hosts:
             summary = stats.summarize(host)
@@ -152,9 +143,6 @@ class CallbackModule(CallbackBase):
             self.logger.info(msg)
 
     def _write_time_calculation(self):
-        """
-        Write time calculation for playbook
-        """
         end_time_now = datetime.now()
         end_time = end_time_now.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -176,8 +164,5 @@ class CallbackModule(CallbackBase):
         self._display.banner(finish_text)
 
     def _write_text_with_tab(self, text, width, char=' '):
-        """
-        Write text with tab
-        """
         length = width - get_text_width(str(text))
         return f'{text}{char * length}'
