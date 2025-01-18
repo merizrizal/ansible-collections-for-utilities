@@ -1,5 +1,4 @@
 # Ansible Collection - merizrizal.utils
 
-Utilities.
-Consists of:
+The Ansible collections of utilities that consists of:
 - custom_logging

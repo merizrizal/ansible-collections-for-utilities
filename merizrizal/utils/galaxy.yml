@@ -1,12 +1,15 @@
 ---
+# SPDX-License-Identifier: GPL-3.0-or-later
 namespace: merizrizal
 name: utils
 version: 1.0.0
 readme: README.md
 authors:
-  - merizrizal@gmail.com
+- Mei Rizal <merizrizal@gmail.com>
 
 description: Utility for deployment
+license:
+- GPL-3.0-or-later
 
 repository: https://github.com/merizrizal/ansible_collections_for_utilities
 build_ignore: []
