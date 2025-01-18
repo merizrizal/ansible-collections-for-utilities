@@ -6,5 +6,7 @@ Requirements:
 Do `make install` for installing into ansible collections directory
 
 Put this into callback_enabled in ansible.cfg
+```
 [defaults]
 callbacks_enabled = merizrizal.utils.custom_logging
+```
