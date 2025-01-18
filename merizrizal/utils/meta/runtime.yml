@@ -1,4 +1,3 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 ---
-# Collections must specify a minimum required ansible version to upload
-# to galaxy
 requires_ansible: ">=2.15.0"
