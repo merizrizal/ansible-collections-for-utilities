@@ -11,7 +11,7 @@ __metaclass__ = type
 
 DOCUMENTATION = '''
     name: custom_logging
-    type: aggregate
+    type: stdout
     requirements:
       - enable in configuration
     short_description: Logging for Ansible playbook
@@ -27,6 +27,9 @@ DOCUMENTATION = '''
         ini:
           - section: callback_custom_logging
             key: log_directory
+    extends_documentation_fragment:
+      - ansible.builtin.default_callback
+      - ansible.builtin.result_format_callback
 '''
 
 import json
@@ -39,14 +42,14 @@ from ansible.executor.stats import AggregateStats
 from ansible.executor.task_result import TaskResult
 from ansible.playbook import Playbook
 from ansible.playbook.task import Task
-from ansible.plugins.callback import CallbackBase
+from ansible.plugins.callback.default import CallbackModule as Default
 from ansible.utils.display import get_text_width
 from ansible.utils.path import makedirs_safe
 
 
-class CallbackModule(CallbackBase):
+class CallbackModule(Default):
     CALLBACK_VERSION = 2.0
-    CALLBACK_TYPE = 'notification'
+    CALLBACK_TYPE = 'stdout'
     CALLBACK_NAME = 'merizrizal.utils.custom_logging'
 
     LOG_FILE_SUFFIX = datetime.now().strftime('%Y-%m-%d-%H-%M-%S-%f')
@@ -54,6 +57,7 @@ class CallbackModule(CallbackBase):
     RECAP_FORMAT = '%(host)s : ok=%(ok)s  changed=%(changed)s  unreachable=%(unreachable)s  failed=%(failures)s  ' \
         'skipped=%(skipped)s  rescued=%(rescued)s  ignored=%(ignored)s'
     SEPARATOR = '=' * 150
+    ASTERISKS = '*' * 20
 
     def __init__(self):
         super().__init__()
@@ -70,35 +74,71 @@ class CallbackModule(CallbackBase):
         self.log_directory = self.get_option('log_directory')
 
     def v2_runner_on_failed(self, result, ignore_errors=False):
+        result_clone = result
+        if result._task.vars and result._task.vars.get('custom_logging_hide_cmd'):
+            result_clone._result.update({'cmd': self.ASTERISKS})
+
+        super().v2_runner_on_failed(result_clone, ignore_errors)
+
         ignore_text = '.....ignoring' if ignore_errors else ''
-        self._log(result, f'FAILED {ignore_text}')
+        self._log(result_clone, f'FAILED {ignore_text}')
 
     def v2_runner_on_ok(self, result: TaskResult):
-        self._log(result, 'OK')
+        result_clone = result
+        if result._task.vars and result._task.vars.get('custom_logging_hide_cmd'):
+            result_clone._result.update({'cmd': self.ASTERISKS})
+
+        super().v2_runner_on_ok(result)
+
+        self._log(result_clone, 'OK')
 
     def v2_runner_on_skipped(self, result: TaskResult):
+        super().v2_runner_on_skipped(result)
+
         self._log(result, 'SKIPPED')
 
     def v2_runner_on_unreachable(self, result: TaskResult):
+        super().v2_runner_on_unreachable(result)
+
         self._log(result, 'UNREACHABLE')
 
     def v2_runner_on_async_failed(self, result: TaskResult):
+        super().v2_runner_on_async_failed(result
+                                          )
         self._log(result, 'ASYNC_FAILED')
 
+    def v2_runner_item_on_ok(self, result):
+        super().v2_runner_item_on_ok(result)
+
+    def v2_runner_item_on_failed(self, result):
+        super().v2_runner_item_on_failed(result)
+
+    def v2_runner_item_on_skipped(self, result):
+        super().v2_runner_item_on_skipped(result)
+
+    def v2_playbook_on_include(self, included_file):
+        super().v2_playbook_on_include(included_file)
+
     def _log(self, result: TaskResult, category):
-        data = json.dumps(result._result)
+        result_obj = result._result
+        result_obj.update({'task_result': category})
+        data = json.dumps(result_obj)
         if result._task.vars and result._task.vars.get('custom_logging_mask'):
             for mask in result._task.vars.get('custom_logging_mask'):
-                data = re.sub(mask, '*********************************', data)
+                data = re.sub(mask, self.ASTERISKS, data)
 
         self.logger.info(f'{self._write_text_with_tab(result._host.get_name(), 18)} => {category}')
         self.logger.info(f'{data} \r\n')
 
     def v2_playbook_on_task_start(self, task: Task, is_conditional):
+        super().v2_playbook_on_task_start(task, is_conditional)
+
         self.logger.info(f'BEGIN TASK [{task.get_name()}]')
         self.logger.info(self.SEPARATOR)
 
     def v2_playbook_on_start(self, playbook: Playbook):
+        super().v2_playbook_on_start(playbook)
+
         self.playbook = playbook._file_name
         self._make_log_file_path()
 
@@ -107,7 +147,7 @@ class CallbackModule(CallbackBase):
     def _make_log_file_path(self):
         playbook_path = Path(self.playbook)
 
-        log_subdirectory = Path(self.log_directory).joinpath(playbook_path.parent)
+        log_subdirectory = Path(self.log_directory).joinpath(playbook_path.parts[0])
         makedirs_safe(log_subdirectory)
 
         self.path = log_subdirectory.joinpath(f'{playbook_path.stem}-{self.LOG_FILE_SUFFIX}.log')
@@ -118,6 +158,8 @@ class CallbackModule(CallbackBase):
                             level=logging.DEBUG)
 
     def v2_playbook_on_stats(self, stats: AggregateStats):
+        super().v2_playbook_on_stats(stats)
+
         play_recap_text = self._write_text_with_tab('PLAY RECAP ', 80, '*')
         play_recap_text = self._write_text_with_tab('', 70, '*') + play_recap_text
 
